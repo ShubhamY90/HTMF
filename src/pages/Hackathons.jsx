@@ -1,12 +1,14 @@
 // src/pages/HackathonsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { fetchHackathons } from '../context/firebase';
+import { useNavigate } from 'react-router-dom';
 
 const HackathonsPage = () => {
   const [hackathons, setHackathons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedHackathon, setSelectedHackathon] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadHackathons = async () => {
@@ -37,7 +39,7 @@ const HackathonsPage = () => {
         {words.slice(0, 10).join(" ")}
         <span
           className="text-sm text-blue-300 cursor-pointer ml-1"
-          onClick={() => openModal(hackathon)}
+          onClick={() => setSelectedHackathon(hackathon)}
         >
           … know more
         </span>
@@ -45,21 +47,14 @@ const HackathonsPage = () => {
     );
   };
 
-  const openModal = (hackathon) => {
-    setSelectedHackathon(hackathon);
-    setModalVisible(true);
-  };
-
   const closeModal = () => {
-    // Smoothly transition out then clear state.
     setModalVisible(false);
-    // Delay clearing the selected hackathon to allow animation finish (300ms)
     setTimeout(() => setSelectedHackathon(null), 300);
   };
 
   const handleJoin = (hackathon) => {
-    // Replace this with your join logic.
-    alert(`You've joined ${hackathon.title}!`);
+    // Navigate to the Hackathon details page for that hackathon.
+    navigate(`/hackathon/${hackathon.id}`);
   };
 
   if (loading) {
@@ -81,7 +76,7 @@ const HackathonsPage = () => {
             Upcoming Hackathons
           </h2>
           {upcomingHackathons.length === 0 ? (
-            <p className="text-center text-white">No upcoming hackathons.</p>
+            <p className="text-center text-gray-600">No upcoming hackathons.</p>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {upcomingHackathons.map((hackathon) => (
@@ -125,7 +120,7 @@ const HackathonsPage = () => {
             Past Hackathons
           </h2>
           {pastHackathons.length === 0 ? (
-            <p className="text-center text-white">No past hackathons.</p>
+            <p className="text-center text-gray-600">No past hackathons.</p>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {pastHackathons.map((hackathon) => (
@@ -188,12 +183,6 @@ const HackathonsPage = () => {
                 alt={selectedHackathon.title}
                 className="w-full rounded mb-4"
               />
-            )}
-            {selectedHackathon.createdAt && (
-              <p className="text-sm text-gray-600">
-                Added on:{" "}
-                {new Date(selectedHackathon.createdAt.seconds * 1000).toLocaleDateString()}
-              </p>
             )}
           </div>
         </div>
