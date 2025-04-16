@@ -41,10 +41,14 @@ const Header = () => {
           {userRole === 'admin' && (
             <Link to="/add-hackathon" className="mx-2 text-white hover:underline">Add Hackathon</Link>
           )}
-          {userRole && (
+          {userRole ? (
             <button onClick={handleLogout} className="mx-2 text-white hover:underline">
               Logout
             </button>
+          ) : (
+            <Link to="/login" className="mx-2 text-white hover:underline">
+              Login
+            </Link>
           )}
         </nav>
       </div>
