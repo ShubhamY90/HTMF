@@ -74,6 +74,7 @@ function Login() {
   };
 
   return (
+    <div>
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="w-[850px] h-[500px] rounded-lg overflow-hidden shadow-[0_0_20px_#7e22ce] border-2 border-purple-700 flex bg-black">
         {isSignup ? (
@@ -267,6 +268,13 @@ function Login() {
           </>
         )}
       </div>
+    </div>
+    <a href="https://github.com/ShubhamY90/HTMF.git"
+            className="text-black text-2xl font-medium underline hover:text-green-500 transition my-4 flex justify-center"
+        >
+            Repository Link (GitHub)
+        </a>
+    
     </div>
   );
 }
