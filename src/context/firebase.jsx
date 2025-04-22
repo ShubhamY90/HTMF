@@ -1,3 +1,4 @@
+// then delete the interest flag
 // src/context/firebase.jsx
 import { initializeApp } from "firebase/app";
 import { 
@@ -131,19 +132,27 @@ export const updateUserProfile = async (uid, updatedData) => {
 /**
  * Add a new hackathon document to Firestore ("hackathons" collection).
  */
-export const addHackathonData = async ({ title, description, date, location, imageUrl, deadline }) => {
+export const addHackathonData = async ({
+  title,
+  description,
+  date,
+  location,
+  type,        // ← added
+  imageUrl,
+  deadline
+}) => {
   const docRef = await addDoc(collection(db, "hackathons"), {
     title,
     description,
     date,
     location,
+    type: type || null,      // ← store type (or null if none)
     imageUrl: imageUrl || null,
     deadline: deadline || null,
     createdAt: serverTimestamp(),
   });
   return docRef.id;
 };
-
 /**
  * Fetch all hackathons from the "hackathons" collection.
  * @returns {Promise<Array>} Array of hackathon objects (each containing its id and data).
@@ -278,52 +287,31 @@ export const updateJoinRequestStatus = async (notificationId, newStatus) => {
  * @param {string} hackathonId - The hackathon ID.
  * @param {string} userId - The user's UID.
  */
-export const joinTeam = async (teamId, hackathonId, userId) => {
+const __joinTeam = async (teamId, hackathonId, userId) => {
   const teamRef = doc(db, "teams", teamId);
   const userRef = doc(db, "users1", userId);
 
-  try {
-    await runTransaction(db, async (transaction) => {
-      // Get team document.
-      const teamDoc = await transaction.get(teamRef);
-      if (!teamDoc.exists()) {
-        throw new Error("Team does not exist!");
-      }
-      const teamData = teamDoc.data();
-      if (teamData.members.length >= teamData.maxMembers) {
-        throw new Error("Team is already full!");
-      }
+  await runTransaction(db, async (transaction) => {
+    const teamDoc = await transaction.get(teamRef);
+    if (!teamDoc.exists()) throw new Error("Team does not exist!");
+    const data = teamDoc.data();
+    if (data.members.length >= data.maxMembers) throw new Error("Team full!");
 
-      // Get user document and check for existing participation in this hackathon.
-      const userDoc = await transaction.get(userRef);
-      if (!userDoc.exists()) {
-        throw new Error("User not found!");
-      }
-      const userData = userDoc.data();
-      if (
-        userData.hackathonParticipation &&
-        userData.hackathonParticipation[hackathonId]
-      ) {
-        throw new Error("User already joined a team.");
-      }
+    const userDoc = await transaction.get(userRef);
+    if (!userDoc.exists()) throw new Error("User not found!");
+    const userData = userDoc.data();
+    if (userData.hackathonParticipation?.[hackathonId]) {
+      throw new Error("Already on a team.");
+    }
 
-      // If the check passes, add the user to the team.
-      transaction.update(teamRef, {
-        members: arrayUnion(userId),
-      });
-
-      // Update the user's hackathon participation information.
-      transaction.update(userRef, {
-        [`hackathonParticipation.${hackathonId}`]: {
-          teamId: teamId,
-          joinedAt: serverTimestamp(),
-        },
-      });
+    transaction.update(teamRef, { members: arrayUnion(userId) });
+    transaction.update(userRef, {
+      [`hackathonParticipation.${hackathonId}`]: {
+        teamId,
+        joinedAt: serverTimestamp(),
+      },
     });
-  } catch (error) {
-    console.error("Error joining team: ", error);
-    throw error;
-  }
+  });
 };
 
 /**
@@ -381,7 +369,7 @@ export const joinTeamUsingCode = async (teamCode, hackathonId, userId) => {
     if (data.members.length >= data.maxMembers) {
       throw new Error("Team is already full!");
     }
-    await joinTeam(teamDoc.id, hackathonId, userId);
+    await __joinTeam(teamDoc.id, hackathonId, userId);
   } catch (error) {
     console.error("Error joining team using code: ", error);
     throw error;
@@ -578,3 +566,89 @@ export const sendContactReply = async (notificationId, replyMessage) => {
     throw error;
   }
 };
+
+/**
+ * Mark yourself interested under hackathons/{hackathonId}/users/{uid}
+ */
+export async function expressInterest(hackathonId, uid, name) {
+  const ref = doc(db, "hackathons", hackathonId, "users", uid);
+  await setDoc(
+    ref,
+    { interested: true, name, ts: serverTimestamp() },
+    { merge: true }
+  );
+}
+
+/**
+ * List everyone who clicked “Interested”
+ */
+export async function fetchInterestedUsers(hackathonId) {
+  const col = collection(db, "hackathons", hackathonId, "users");
+  const q = query(col, where("interested", "==", true));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+}
+
+/**
+ * Send a team‑invite notification
+ */
+export async function sendTeamInvite(hackathonId, teamId, uid, senderName) {
+  const ref = doc(db, "hackathons", hackathonId, "users", uid);
+  const inviteObj = { teamId, senderName, status: "pending" };
+  await updateDoc(ref, { invites: arrayUnion(inviteObj) });
+
+  // 2) write a notification record for UIs or Cloud Functions
+  await addDoc(
+    collection(db, "notifications"),
+    {
+      type:        "team_invite",
+      hackathonId,
+      teamId,
+      recipientId: uid,
+      senderName,
+      status:      "pending",
+      createdAt:   serverTimestamp(),
+      message:     `${senderName} invited you to join team ${teamId}.`
+    }
+  );
+}
+
+/**
+ * Fetch your pending invites
+ */
+export async function fetchUserInvites(hackathonId, uid) {
+  const ref = doc(db, "hackathons", hackathonId, "users", uid);
+  const snap = await getDoc(ref);
+  return snap.exists() ? snap.data().invites || [] : [];
+}
+
+/**
+ * Accept or decline an invite (and on accept, auto‑join + clear interest)
+ */
+export async function respondToInvite(hackathonId, teamId, uid, status) {
+  const ref = doc(db, "hackathons", hackathonId, "users", uid);
+
+  // remove old pending
+  await updateDoc(ref, {
+    invites: arrayRemove({ teamId, senderName: "", status: "pending" })
+  });
+
+  // add updated status
+  await updateDoc(ref, {
+    invites: arrayUnion({ teamId, senderName: "", status })
+  });
+
+  if (status === "accepted") {
+    await __joinTeam(teamId, hackathonId, uid);
+    await updateDoc(ref, { interested: false });
+  }
+}
+
+/**
+ * Override joinTeam globally so it clears the interested flag too
+ */
+export async function joinTeam(teamId, hackathonId, uid) {
+  await __joinTeam(teamId, hackathonId, uid);
+  const ref = doc(db, "hackathons", hackathonId, "users", uid);
+  await deleteDoc(ref);
+}

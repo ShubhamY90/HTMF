@@ -1,4 +1,3 @@
-// src/pages/AddHackathon.jsx
 import React, { useState } from 'react';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { addHackathonData } from "../context/firebase";
@@ -9,6 +8,7 @@ const AddHackathon = () => {
   // The hackathon scheduled date will be set automatically on form submit.
   const [location, setLocation] = useState('');
   const [deadline, setDeadline] = useState(''); // Deadline input for date and time
+  const [type, setType] = useState(''); // New hackathon type field
   const [message, setMessage] = useState('');
   const [imageFile, setImageFile] = useState(null);
 
@@ -30,14 +30,15 @@ const AddHackathon = () => {
         imageUrl = await getDownloadURL(fileRef);
       }
 
-      // Save hackathon data (including the auto-set "date", imageUrl, and deadline) to Firestore.
+      // Save hackathon data (including the auto-set "date", imageUrl, deadline, and type) to Firestore.
       await addHackathonData({
         title,
         description,
         date: hackathonDate,
         location,
-        imageUrl,  // will be null if no image was uploaded
-        deadline     // expected to be in a valid datetime-local format string
+        deadline,     // expected to be in a valid datetime-local format string
+        type,         // hackathon type field
+        imageUrl,     // will be null if no image was uploaded
       });
       
       setMessage("Hackathon added successfully!");
@@ -46,6 +47,7 @@ const AddHackathon = () => {
       setDescription('');
       setLocation('');
       setDeadline('');
+      setType('');
       setImageFile(null);
     } catch (error) {
       setMessage(`Error: ${error.message}`);
@@ -83,6 +85,32 @@ const AddHackathon = () => {
             className="w-full p-3 rounded bg-[#1f1f1f] text-gray-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-600"
             required
           />
+
+          {/* Hackathon Type input */}
+          <div className="flex flex-col">
+            <label className="mb-1 text-gray-200">Hackathon Type</label>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="w-full p-3 rounded bg-[#1f1f1f] text-gray-100 outline-none focus:ring-2 focus:ring-purple-600"
+              required
+            >
+              <option value="" disabled>Select type</option>
+              <option value="Web Development">Web Development</option>
+              <option value="Game Development">Game Development</option>
+              <option value="ML">Machine Learning</option>
+              <option value="Data Science">Data Science</option>
+              <option value="AI">Artificial Intelligence</option>
+              <option value="Web3">Web3</option>
+              <option value="Blockchain">Blockchain</option>
+              <option value="IoT">IoT</option>
+              <option value="Mobile">Mobile Development</option>
+              <option value="Cloud">Cloud Computing</option>
+              <option value="Cybersecurity">Cybersecurity</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
           {/* Deadline input */}
           <div className="flex flex-col">
             <label className="mb-1 text-gray-200">Deadline (Date &amp; Time)</label>
