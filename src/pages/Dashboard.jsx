@@ -86,14 +86,14 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+      <div className="min-h-screen flex items-center justify-center bg-white text-white">
         <p>Loading your dashboard...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black py-10 px-4">
+    <div className="min-h-screen bg-white py-10 px-4">
       <div className="max-w-4xl mx-auto bg-gray-600 p-8 rounded-2xl shadow-xl text-white">
         <h1 className="text-4xl font-extrabold text-center mb-8">Your Dashboard</h1>
 

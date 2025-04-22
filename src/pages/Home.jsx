@@ -26,7 +26,15 @@ const HomePage = () => {
           >
             Get Started
           </a>
+          <br />
+          <br />
+          <a href="https://github.com/ShubhamY90/HTMF.git"
+            className="text-black text-2xl font-medium underline hover:text-green-500 transition my-4"
+        >
+            Repository Link (GitHub)
+        </a>
         </div>
+        
       </section>
 
       {/* Features Section */}
