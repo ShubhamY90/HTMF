@@ -2,7 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db, auth } from '../context/firebase';
-import { updateJoinRequestStatus, joinTeam, fetchUserProfile } from '../context/firebase';
+import { updateJoinRequestStatus } from '../context/firebase/notifications';
+import { fetchUserProfile } from '../context/firebase/user';
+import { joinTeam } from '../context/firebase/teams';
 
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);

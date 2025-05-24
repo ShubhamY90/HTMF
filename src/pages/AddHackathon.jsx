@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { addHackathonData } from "../context/firebase";
+import { addHackathonData } from "../context/firebase/hackathon";
+import { uploadHackathonImage } from "../context/firebase/utils/uploadImage";
 
 const AddHackathon = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  // The hackathon scheduled date will be set automatically on form submit.
   const [location, setLocation] = useState('');
-  const [deadline, setDeadline] = useState(''); // Deadline input for date and time
-  const [type, setType] = useState(''); // New hackathon type field
+  const [deadline, setDeadline] = useState('');
+  const [type, setType] = useState('');
   const [message, setMessage] = useState('');
   const [imageFile, setImageFile] = useState(null);
 
@@ -16,33 +15,20 @@ const AddHackathon = () => {
     e.preventDefault();
     setMessage('');
     try {
-      // Set the hackathon date automatically (current timestamp)
       const hackathonDate = new Date().toISOString();
+      const imageUrl = await uploadHackathonImage(imageFile);
 
-      let imageUrl = null;
-      if (imageFile) {
-        // Use Firebase Storage to upload the image
-        const storage = getStorage();
-        // Normalize file name to avoid issues with spaces
-        const normalizedFileName = imageFile.name.replace(/\s+/g, "_");
-        const fileRef = ref(storage, `hackathonImages/${Date.now()}_${normalizedFileName}`);
-        await uploadBytes(fileRef, imageFile);
-        imageUrl = await getDownloadURL(fileRef);
-      }
-
-      // Save hackathon data (including the auto-set "date", imageUrl, deadline, and type) to Firestore.
       await addHackathonData({
         title,
         description,
         date: hackathonDate,
         location,
-        deadline,     // expected to be in a valid datetime-local format string
-        type,         // hackathon type field
-        imageUrl,     // will be null if no image was uploaded
+        deadline,
+        type,
+        imageUrl,
       });
-      
+
       setMessage("Hackathon added successfully!");
-      // Clear the form fields.
       setTitle('');
       setDescription('');
       setLocation('');
@@ -56,9 +42,9 @@ const AddHackathon = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="w-[850px] p-10 rounded-lg overflow-hidden shadow-[0_0_20px_#7e22ce] border-2 border-purple-700 flex flex-col bg-black">
-        <h2 className="text-4xl font-extrabold text-white mb-6 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-[#fffbea]">
+      <div className="w-[850px] p-10 rounded-lg overflow-hidden shadow-[0_0_20px_#7e22ce] border-2 border-purple-700 flex flex-col bg-white">
+        <h2 className="text-4xl font-extrabold text-purple-800 mb-6 text-center">
           Add Hackathon
         </h2>
         <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
@@ -67,14 +53,14 @@ const AddHackathon = () => {
             placeholder="Hackathon Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full p-3 rounded bg-[#1f1f1f] text-gray-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-600"
+            className="w-full p-3 rounded bg-gray-100 text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-purple-600"
             required
           />
           <textarea
             placeholder="Hackathon Description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full p-3 rounded bg-[#1f1f1f] text-gray-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-600"
+            className="w-full p-3 rounded bg-gray-100 text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-purple-600"
             required
           />
           <input
@@ -82,17 +68,16 @@ const AddHackathon = () => {
             placeholder="Location"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            className="w-full p-3 rounded bg-[#1f1f1f] text-gray-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-600"
+            className="w-full p-3 rounded bg-gray-100 text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-purple-600"
             required
           />
 
-          {/* Hackathon Type input */}
           <div className="flex flex-col">
-            <label className="mb-1 text-gray-200">Hackathon Type</label>
+            <label className="mb-1 text-gray-700">Hackathon Type</label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="w-full p-3 rounded bg-[#1f1f1f] text-gray-100 outline-none focus:ring-2 focus:ring-purple-600"
+              className="w-full p-3 rounded bg-gray-100 text-gray-900 outline-none focus:ring-2 focus:ring-purple-600"
               required
             >
               <option value="" disabled>Select type</option>
@@ -111,19 +96,17 @@ const AddHackathon = () => {
             </select>
           </div>
 
-          {/* Deadline input */}
           <div className="flex flex-col">
-            <label className="mb-1 text-gray-200">Deadline (Date &amp; Time)</label>
+            <label className="mb-1 text-gray-700">Deadline (Date &amp; Time)</label>
             <input
               type="datetime-local"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="w-full p-3 rounded bg-[#1f1f1f] text-gray-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-600"
+              className="w-full p-3 rounded bg-gray-100 text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-purple-600"
               required
             />
           </div>
 
-          {/* Custom Image Upload Section */}
           <div className="w-full">
             {imageFile ? (
               <div className="flex items-center justify-between p-3 border-2 border-dashed border-gray-400 rounded bg-gray-100">
@@ -137,8 +120,8 @@ const AddHackathon = () => {
                 </button>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center cursor-pointer border-2 border-dashed border-gray-400 p-4 rounded hover:border-gray-500">
-                <span className="text-gray-500">Choose Photo</span>
+              <label className="flex flex-col items-center justify-center cursor-pointer border-2 border-dashed border-gray-400 p-4 rounded hover:border-gray-500 bg-gray-100 text-gray-600">
+                <span className="text-sm">Choose Photo</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -159,7 +142,7 @@ const AddHackathon = () => {
           </button>
         </form>
         {message && (
-          <p className="mt-4 text-center text-white">{message}</p>
+          <p className="mt-4 text-center text-purple-800">{message}</p>
         )}
       </div>
     </div>

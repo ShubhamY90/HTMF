@@ -1,4 +1,3 @@
-// then delete the interest flag
 // src/context/firebase.jsx
 import { initializeApp } from "firebase/app";
 import { 

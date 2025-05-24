@@ -1,12 +1,10 @@
-// src/pages/Dashboard.jsx
 import React, { useState, useEffect } from "react";
 import { getAuth } from "firebase/auth";
-import { fetchUserProfile, updateUserProfile } from "../context/firebase";
+import { fetchUserProfile, updateUserProfile } from "../context/firebase/user";
 
 const Dashboard = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  // Local editing state for extra details
   const [mobileNumber, setMobileNumber] = useState("");
   const [githubId, setGithubId] = useState("");
   const [experienceLevel, setExperienceLevel] = useState("");
@@ -50,7 +48,6 @@ const Dashboard = () => {
     try {
       await updateUserProfile(currentUser.uid, updates);
       setUpdateMessage("Profile updated successfully!");
-      // Optionally refresh profile data:
       const updatedProfile = await fetchUserProfile(currentUser.uid);
       setProfile(updatedProfile);
     } catch (error) {
@@ -84,60 +81,57 @@ const Dashboard = () => {
     return (filled / extraFields.length) * 100;
   };
 
+  const completeness = calculateCompleteness();
+  const barColor = completeness < 50 ? "bg-red-500" : "bg-green-500";
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white text-white">
+      <div className="min-h-screen flex items-center justify-center bg-[#fffbea] text-gray-800">
         <p>Loading your dashboard...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white py-10 px-4">
-      <div className="max-w-4xl mx-auto bg-gray-600 p-8 rounded-2xl shadow-xl text-white">
+    <div className="min-h-screen bg-white py-10 px-4 text-gray-900">
+      <div className="max-w-4xl mx-auto bg-[#fffbea] p-8 rounded-2xl shadow-xl">
         <h1 className="text-4xl font-extrabold text-center mb-8">Your Dashboard</h1>
 
         {/* Profile Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10 text-lg">
-          <div>
-            <strong>Name:</strong> {profile?.name || "N/A"}
-          </div>
-          <div>
-            <strong>College:</strong> {profile?.collegeName || "N/A"}
-          </div>
-          <div>
-            <strong>Email:</strong> {profile?.email || "N/A"}
-          </div>
+          <div><strong>Name:</strong> {profile?.name || "N/A"}</div>
+          <div><strong>College:</strong> {profile?.collegeName || "N/A"}</div>
+          <div><strong>Email:</strong> {profile?.email || "N/A"}</div>
         </div>
 
         {/* Editable Fields */}
         <div className="space-y-6">
           <div>
-            <label className="block mb-1 font-semibold text-gray-300">Mobile Number</label>
+            <label className="block mb-1 font-semibold">Mobile Number</label>
             <input
               type="text"
               value={mobileNumber}
               onChange={(e) => setMobileNumber(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2a9d8f] bg-gray-700 text-white"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2a9d8f]"
             />
           </div>
 
           <div>
-            <label className="block mb-1 font-semibold text-gray-300">GitHub ID</label>
+            <label className="block mb-1 font-semibold">GitHub ID</label>
             <input
               type="text"
               value={githubId}
               onChange={(e) => setGithubId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2a9d8f] bg-gray-700 text-white"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2a9d8f]"
             />
           </div>
 
           <div>
-            <label className="block mb-1 font-semibold text-gray-300">Experience Level</label>
+            <label className="block mb-1 font-semibold">Experience Level</label>
             <select
               value={experienceLevel}
               onChange={(e) => setExperienceLevel(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2a9d8f] bg-gray-700 text-white"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2a9d8f]"
             >
               <option value="">Select level</option>
               <option value="beginner">Beginner</option>
@@ -147,18 +141,18 @@ const Dashboard = () => {
           </div>
 
           <div>
-            <label className="block mb-1 font-semibold text-gray-300">Skills</label>
+            <label className="block mb-1 font-semibold">Skills</label>
             <div className="flex flex-wrap gap-2 mb-2">
               {skills.map((skill, idx) => (
                 <div
                   key={idx}
-                  className="bg-gray-600 text-sm px-3 py-1 rounded-full flex items-center"
+                  className="bg-gray-200 text-sm px-3 py-1 rounded-full flex items-center"
                 >
                   <span>{skill}</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveSkill(skill)}
-                    className="ml-2 text-red-400 hover:text-red-600 font-bold"
+                    className="ml-2 text-red-500 hover:text-red-700 font-bold"
                   >
                     ×
                   </button>
@@ -171,7 +165,7 @@ const Dashboard = () => {
                 value={newSkill}
                 onChange={(e) => setNewSkill(e.target.value)}
                 placeholder="Add a skill"
-                className="flex-grow px-4 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2a9d8f] bg-gray-700 text-white"
+                className="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2a9d8f]"
               />
               <button
                 type="button"
@@ -193,7 +187,7 @@ const Dashboard = () => {
             Update Profile
           </button>
           {updateMessage && (
-            <p className="mt-3 text-center text-sm text-gray-300">
+            <p className="mt-3 text-center text-sm text-gray-700">
               {updateMessage}
             </p>
           )}
@@ -201,15 +195,15 @@ const Dashboard = () => {
 
         {/* Profile Completeness */}
         <div className="mt-10">
-          <p className="font-semibold text-gray-300 mb-1">
-            Profile Completeness: {calculateCompleteness().toFixed(0)}%
+          <p className="font-semibold mb-1">
+            Profile Completeness: {completeness.toFixed(0)}%
           </p>
-          <div className="w-full bg-gray-600 h-5 rounded-full overflow-hidden">
+          <div className="w-full bg-gray-300 h-5 rounded-full overflow-hidden">
             <div
-              className="bg-blue-500 h-5 text-xs font-bold text-white flex items-center justify-center"
-              style={{ width: `${calculateCompleteness()}%` }}
+              className={`${barColor} h-5 text-xs font-bold text-white flex items-center justify-center transition-all duration-300`}
+              style={{ width: `${completeness}%` }}
             >
-              {calculateCompleteness().toFixed(0)}%
+              {completeness.toFixed(0)}%
             </div>
           </div>
         </div>

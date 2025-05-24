@@ -20,12 +20,12 @@ const Header = () => {
   return (
     <header
       className="fixed top-1 left-1 right-1 rounded-b-lg rounded-t-lg z-50 p-5 text-white header-shadow"
-      style={{ backgroundColor: 'rgba(254, 74, 96, 0.9)' }} // 90% opacity of #580191
+      style={{ backgroundColor: 'rgba(54, 51, 51, 0.9)' }} // 90% opacity of #580191
     >
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center space-x-2">
-          <span className="inline-block text-pink-500 text-3xl">✧</span>
-          <span className="text-[#ffc480] text-3xl">Hackathon Teammate Finder</span>
+          <span className="inline-block text-[#8200da] text-3xl">✧</span>
+          <span className="text-[#f8f6e8] text-3xl">Hackathon Teammate Finder</span>
           <span className="inline-block text-teal-600 text-3xl">✧</span>
         </div>
         <nav>

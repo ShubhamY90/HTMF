@@ -2,17 +2,21 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
-import { db, auth } from '../context/firebase';
+import { db, auth } from '../context/firebase/auth';
+import { onSnapshot } from "firebase/firestore";
+import { sendTeamDeletionNotification } from "../context/firebase/notifications";
+
 import {
   fetchUserHackathonParticipation,
   createTeam,
   getJoinableTeamsForHackathon,
   joinTeam,           // Direct join (if you choose to allow it)
-  sendJoinRequest,    // Request-based join: sends a notification to team leader
   deleteTeam,
   leaveTeam,
   fetchTeamMembers    // Helper to fetch team member profiles (ensure it's exported in firebase.jsx)
-} from "../context/firebase";
+} from "../context/firebase/teams";
+import{ sendJoinRequest } from "../context/firebase/notifications"; // Ensure this function is defined in your notifications context
+import { joinTeamUsingCode } from "../context/firebase/teams"; // Ensure this function is defined in your teams context
 
 const HackathonPage = () => {
   const { hackathonId } = useParams();
@@ -62,6 +66,29 @@ const HackathonPage = () => {
     };
     fetchHackathon();
   }, [hackathonId]);
+
+  // Listen for changes in the hackathon document.
+  useEffect(() => {
+    if (!userTeam || !userTeam.teamId) return;
+  
+    const teamRef = doc(db, 'teams', userTeam.teamId);
+  
+    const unsubscribe = onSnapshot(teamRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        // Team was deleted. Reset everything for all members.
+        setUserTeam(null);
+        setTeamData(null);
+        setTeamMembers([]);
+        setShowJoinOptions(true);
+        fetchJoinableTeams();
+        alert("Your team was deleted.");
+      }
+    });
+  
+    return () => unsubscribe(); // Clean up the listener when component unmounts or team changes.
+  }, [userTeam]);
+
+  
 
   // Check if the user has already joined a team for this hackathon.
   useEffect(() => {
@@ -216,17 +243,28 @@ const HackathonPage = () => {
       return;
     }
     try {
-      await deleteTeam(userTeam.teamId, hackathonId, currentUser.uid);
+      await deleteTeam(userTeam.teamId, hackathonId, currentUser.uid, hackathon.title);
+      // Notify all team members about the deletion.
+      if (teamData && teamData.members) {
+        const otherMembers = teamData.members.filter(uid => uid !== currentUser.uid);
+        const leaderName = currentUser.displayName || currentUser.email;
+        await sendTeamDeletionNotification(otherMembers, leaderName, teamData.teamName, hackathon.title);
+      }
+      // Reset participation & team data
       setUserTeam(null);
       setTeamData(null);
       setTeamMembers([]);
-      alert("Team deleted successfully.");
+  
+      // Refresh join options so the user can join/create again
+      await fetchJoinableTeams();
+      setShowJoinOptions(true);
+  
+      alert("Team deleted successfully. All members have been notified.");
     } catch (err) {
       console.error(err);
       alert("Error deleting team: " + err.message);
     }
   };
-
   // Leave team (for non-creators).
   const handleLeaveTeam = async () => {
     if (!currentUser) return;

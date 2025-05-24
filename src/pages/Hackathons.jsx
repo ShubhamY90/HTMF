@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchHackathons } from '../context/firebase';
+import { fetchHackathons } from '../context/firebase/hackathon';
 import { useNavigate } from 'react-router-dom';
 
 const HackathonsPage = () => {
@@ -112,7 +112,7 @@ const HackathonsPage = () => {
           </div>
 
           {/* Upcoming Hackathons */}
-          <h2 className="text-4xl font-bold text-center mb-8 text-purple-800">Upcoming Hackathons</h2>
+          <h2 className="text-4xl font-bold text-center mb-8 text-gray-800">Upcoming Hackathons</h2>
           {upcomingHackathons.length === 0 ? (
             <p className="text-center text-gray-600">No upcoming hackathons.</p>
           ) : (

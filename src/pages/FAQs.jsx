@@ -1,6 +1,6 @@
 // src/pages/FAQs.jsx
 import React, { useState } from 'react';
-import { sendContactNotification } from '../context/firebase';
+import { sendContactNotification } from '../context/firebase/notifications';
 
 const FAQs = () => {
   // State to manage the contact form.
