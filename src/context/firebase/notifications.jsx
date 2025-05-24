@@ -5,6 +5,9 @@ import {
   addDoc,
   updateDoc,
   serverTimestamp,
+  query,
+  getDocs,
+  where,
 } from "firebase/firestore";
 
 import { db } from "./config";
@@ -13,23 +16,45 @@ import { db } from "./config";
  * Sends a join request notification to the recipient's subcollection.
  */
 export const sendJoinRequest = async (
-  teamId, hackathonId, senderId, senderName, recipientId
+  teamId,
+  hackathonId,
+  senderId,
+  senderName,
+  recipientId
 ) => {
   try {
-    const notifRef = await addDoc(
-      collection(db, "users1", recipientId, "notifs"),
-      {
-        type: "join_request",
-        teamId,
-        hackathonId,
-        senderId,
-        senderName,
-        recipientId,
-        status: "pending",
-        createdAt: serverTimestamp(),
-        message: `${senderName} requested to join your team.`,
-      }
+    // Reference to notifications for the recipient user
+    const notifsRef = collection(db, "users1", recipientId, "notifs");
+
+    // Query for existing pending join request for this team from this sender
+    const q = query(
+      notifsRef,
+      where("type", "==", "join_request"),
+      where("teamId", "==", teamId),
+      where("senderId", "==", senderId),
+      where("status", "==", "pending")
     );
+
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      // There is already a pending join request, reject new request
+      throw new Error("You already have a pending join request for this team.");
+    }
+
+    // No pending request exists, create a new join request notification
+    const notifRef = await addDoc(notifsRef, {
+      type: "join_request",
+      teamId,
+      hackathonId,
+      senderId,
+      senderName,
+      recipientId,
+      status: "pending",
+      createdAt: serverTimestamp(),
+      message: `${senderName} requested to join your team.`,
+    });
+
     return notifRef.id;
   } catch (error) {
     console.error("Failed to send join request notification:", error);
