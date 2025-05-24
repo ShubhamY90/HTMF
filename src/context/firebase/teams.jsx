@@ -17,6 +17,8 @@ import {
     writeBatch
   } from "firebase/firestore";
   import { db } from "./config";
+  import { sendTeamDeletionNotification } from "../firebase/notifications";
+
   
   export const createTeam = async (hackathonId, userId, teamName, creatorName) => {
     const teamsQuery = query(
@@ -157,17 +159,18 @@ const __joinTeam = async (teamId, hackathonId, userId) => {
    * @param {string} hackathonId - The hackathon ID.
    * @param {string} userId - The creator's UID.
    */
-  // Dummy notification function - replace with your actual implementation
-const sendNotification = async (recipientId, message, type = "info") => {
-  const notifRef = collection(db, "notifications");
-  await addDoc(notifRef, {
-    recipientId,
-    message,
-    type,
-    status: "unread",
-    createdAt: serverTimestamp(),
-  });
-};
+  // Updated sendNotification to save under users1/{userId}/notifs subcollection
+// const sendNotification = async (recipientId, message, type = "info") => {
+//   const notifCollectionRef = collection(db, "users1", recipientId, "notifs");
+//   await addDoc(notifCollectionRef, {
+//     message,
+//     type,
+//     status: "unread",
+//     createdAt: serverTimestamp(),
+//   });
+// };
+
+
 
 /**
    * Leave a team.
@@ -225,6 +228,7 @@ export const leaveTeam = async (teamId, hackathonId, userId) => {
 // import { leaveTeam } from "./auth" or wherever
 
 
+// In deleteTeam, await the notification promises:
 export const deleteTeam = async (teamId, hackathonId, userId, hackathonName) => {
   const teamRef = doc(db, "teams", teamId);
 
@@ -239,25 +243,28 @@ export const deleteTeam = async (teamId, hackathonId, userId, hackathonName) => 
 
     const leaderName = teamData.createdByName || "Team Leader";
     const teamName = teamData.teamName || "Your Team";
+    const memberUids = teamData.members || [];
 
-    const usersRef = collection(db, "users1");
-    const usersSnapshot = await getDocs(usersRef);
+    // Batch for user participation cleanup and team deletion
     const batch = writeBatch(db);
 
+    // Remove hackathonParticipation entry for all team members
+    const usersRef = collection(db, "users1");
+    const usersSnapshot = await getDocs(usersRef);
     for (const userDoc of usersSnapshot.docs) {
       const userData = userDoc.data();
-      // If user has participated in this hackathon, delete the entire hackathonParticipation entry
       if (userData.hackathonParticipation?.[hackathonId]) {
         batch.update(userDoc.ref, {
           [`hackathonParticipation.${hackathonId}`]: deleteField(),
         });
-
-        sendNotification(userDoc.id, `${leaderName} has deleted the Team "${teamName}" for the hackathon "${hackathonName}".`, "team_deleted");
       }
     }
 
     batch.delete(teamRef);
     await batch.commit();
+
+    // After batch commit, send notification to all team members
+    //await sendTeamDeletionNotification(memberUids, leaderName, teamName, hackathonName);
 
   } catch (error) {
     console.error("Error deleting team: ", error);

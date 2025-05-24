@@ -1,62 +1,75 @@
-// src/firebase/notifications.js
+// src/context/firebase/notifications.js
 import {
   doc,
   collection,
   addDoc,
   updateDoc,
   serverTimestamp,
-  deleteDoc,
-  getDoc,
-  getDocs,
-  query,
-  // add any others you actually use
 } from "firebase/firestore";
 
 import { db } from "./config";
 
-export const sendJoinRequest = async (teamId, hackathonId, senderId, senderName, recipientId) => {
-  const docRef = await addDoc(collection(db, "notifications"), {
-    type: "join_request",
-    teamId,
-    hackathonId,
-    senderId,
-    senderName,
-    recipientId,
-    status: "pending",
-    createdAt: serverTimestamp(),
-    message: `${senderName} requested to join your team.`,
-  });
-  return docRef.id;
+/**
+ * Sends a join request notification to the recipient's subcollection.
+ */
+export const sendJoinRequest = async (
+  teamId, hackathonId, senderId, senderName, recipientId
+) => {
+  try {
+    const notifRef = await addDoc(
+      collection(db, "users1", recipientId, "notifs"),
+      {
+        type: "join_request",
+        teamId,
+        hackathonId,
+        senderId,
+        senderName,
+        recipientId,
+        status: "pending",
+        createdAt: serverTimestamp(),
+        message: `${senderName} requested to join your team.`,
+      }
+    );
+    return notifRef.id;
+  } catch (error) {
+    console.error("Failed to send join request notification:", error);
+    throw error;
+  }
 };
 
-export const updateJoinRequestStatus = async (notificationId, newStatus) => {
-  const notifRef = doc(db, "notifications", notificationId);
+/**
+ * Updates the join request notification status.
+ */
+export const updateJoinRequestStatus = async (recipientId, notificationId, newStatus) => {
+  if (!newStatus) {
+    throw new Error("updateJoinRequestStatus: newStatus is undefined or empty");
+  }
+  const notifRef = doc(db, "users1", recipientId, "notifs", notificationId);
   await updateDoc(notifRef, { status: newStatus });
 };
 
 /**
- * Sends a contact message notification to all admins.
- *
- * @param {Object} formData - An object containing the contact form fields.
- *                          Expected to have { name, email, message, senderId }
- * @returns {Promise<string>} - The created notification document ID.
+ * Sends a contact message notification to all admins' notifs subcollections.
+ * `ADMIN_IDS` must be defined/imported elsewhere.
  */
-export const sendContactNotification = async (formData) => {
+export const sendContactNotification = async (formData, ADMIN_IDS) => {
   try {
     const notificationData = {
       type: 'contact_message',
       senderName: formData.name,
       senderEmail: formData.email,
-      // Save senderId if provided (for logged in users); otherwise, omit or set to null.
       senderId: formData.senderId || null,
       message: formData.message,
-      recipientIds: ADMIN_IDS, // Save the array of admin UIDs so that all admins receive this notification.
-      status: 'pending',       // Status is pending reply.
+      status: 'pending',
       createdAt: serverTimestamp(),
     };
 
-    const docRef = await addDoc(collection(db, "notifications"), notificationData);
-    return docRef.id;
+    const promises = ADMIN_IDS.map(adminId => 
+      addDoc(collection(db, "users1", adminId, "notifs"), notificationData)
+    );
+
+    const results = await Promise.all(promises);
+    return results.map(ref => ref.id);
   } catch (error) {
     console.error("Error sending contact notification:", error);
     throw error;
@@ -64,32 +77,25 @@ export const sendContactNotification = async (formData) => {
 };
 
 /**
- * Allow an admin to send a reply to a contact message.
- *
- * @param {string} notificationId - The notification document ID.
- * @param {string} replyMessage - The admin's reply message.
+ * Sends a reply to a contact message notification.
  */
-export const sendContactReply = async (notificationId, replyMessage) => {
-  try {
-    const notifRef = doc(db, "notifications", notificationId);
-    await updateDoc(notifRef, { reply: replyMessage, status: 'replied' });
-  } catch (error) {
-    console.error("Error sending contact reply:", error);
-    throw error;
-  }
+export const sendContactReply = async (recipientId, notificationId, replyMessage) => {
+  const notifRef = doc(db, "users1", recipientId, "notifs", notificationId);
+  await updateDoc(notifRef, { reply: replyMessage, status: 'replied' });
 };
 
-
+/**
+ * Sends a team deletion notification to all members' notifs subcollections.
+ */
 export const sendTeamDeletionNotification = async (memberUids, leaderName, teamName, hackathonTitle) => {
-  const promises = memberUids.map(uid => {
-    return addDoc(collection(db, "notifications"), {
-      recipientId: uid,
+  const promises = memberUids.map(uid => 
+    addDoc(collection(db, "users1", uid, "notifs"), {
       type: "team-deleted",
+      status: "pending",
       message: `The team leader ${leaderName} has deleted the team "${teamName}" for the hackathon "${hackathonTitle}".`,
-      timestamp: serverTimestamp(),
-      read: false,
-    });
-  });
+      createdAt: serverTimestamp(),
+    })
+  );
 
   await Promise.all(promises);
 };
